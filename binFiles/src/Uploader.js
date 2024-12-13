@@ -245,4 +245,7 @@ export default class Uploader {
    * 업로드 된 파일 반환
    */
   getUploadFiles() {}
+  /**
+   *
+   */
 }
