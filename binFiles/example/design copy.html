@@ -172,10 +172,17 @@
       const fileUploader = new Uploader({
         target: dropZone,
         callbacks: {
-          onLoad: (file) => console.log(fileUploader.getFiles()),
+          onLoad: () => console.log(fileUploader.getSelectedFiles()),
+          beforeUpload: () => console.log("beforeUpload"),
+          afterUpload: () => console.log("afterUpload"),
+        },
+        options: {
           maxFiles: 10,
+          minFiles: 1,
+          maxTotalSize: "",
         },
       });
+
       // function handleFiles(files) {
       //   Array.from(files).forEach((file) => {
       //     const fileElement = fileTemplate.cloneNode(true);

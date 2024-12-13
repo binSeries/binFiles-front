@@ -3,14 +3,14 @@ export default class Uploader {
     target,
     options = {},
     callbacks = {},
-    trigger = { start: false },
     uploadMode = "multi",
     uploadUrl,
+    existingFile,
   }) {
     this.target = target; // 업로드 버튼이 표시될 대상
     this.options = {
       maxFiles: Infinity,
-      minFiles: 1,
+      minFiles: 0,
       maxTotalSize: Infinity,
       maxFileSize: Infinity,
       allowedExtensions: [],
@@ -23,13 +23,12 @@ export default class Uploader {
       ...callbacks, // 콜백 함수 overriding을 위한 병합
     };
 
-    this.trigger = trigger; // 외부 제어용 trigger 변수
     this.files = null; // 선택된 파일
     this.uploadMode = uploadMode; // single: 개별 파일 업로드, multi: 다중 파일 업로드
-    this.uploadUrl = uploadUrl;
+    this.uploadUrl = uploadUrl; // 파일 업로드 URL
+    this.existingFile = existingFile; // 기존 파일
 
     this.init();
-    this.setupTriggerObserver();
   }
 
   init() {
@@ -54,10 +53,6 @@ export default class Uploader {
       this.triggerOnLoad(event);
     });
 
-    input.addEventListener("click", (event) => {
-      console.log("hello world");
-    });
-
     input.addEventListener("change", (event) => {
       this.triggerOnLoad(event);
     });
@@ -80,32 +75,11 @@ export default class Uploader {
       Array.from(this.files).forEach((file) => this.callbacks.onLoad(file));
     }
   }
-  /**
-   * trigger 변수를 Proxy로 감싸 상태 변화 감지
-   */
-  setupTriggerObserver() {
-    const proxyTrigger = new Proxy(this.trigger, {
-      set: async (target, key, value) => {
-        if (key === "start" && value === true) {
-          // trigger.start가 true로 변경되면 업로드 시작
-          await this.triggerUpload();
-          // 업로드 완료 후 false로 리셋
-          target[key] = false;
-        } else {
-          target[key] = value;
-        }
-        // 프록시 성공 처리
-        return true;
-      },
-    });
-
-    this.trigger = proxyTrigger;
-  }
 
   /**
-   * trigger 변경 시 처리
+   * 파일 업로드
    */
-  async triggerUpload() {
+  async upload() {
     if (!this.files || this.files.length === 0) {
       alert("업로드 할 파일이 없습니다.");
       return;
@@ -166,6 +140,7 @@ export default class Uploader {
       return { file, error, status: "error" };
     }
   }
+
   /**
    * uploadMode === multi 일 때 다중 업로드 진행
    */
@@ -233,8 +208,9 @@ export default class Uploader {
     }
 
     // total파일 사이즈
+    // total파일 사이즈를 여러 형태로 정의할 수 있어야 한다.
     const totalSize = Array.from(this.files).reduce(
-      (acc, file) => acc + file.size,
+      (totalSize, file) => totalSize + file.size,
       0
     );
 
@@ -256,7 +232,17 @@ export default class Uploader {
   /**
    * 선택된 파일 반환
    */
-  getFiles() {
+  getSelectedFiles() {
     return this.files ? Array.from(this.files) : [];
   }
+
+  /**
+   * 삭제된 파일 반환
+   */
+  getDelFiles() {}
+
+  /**
+   * 업로드 된 파일 반환
+   */
+  getUploadFiles() {}
 }
