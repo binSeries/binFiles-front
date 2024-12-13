@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <style>
+      #fileUploader {
+        width: 300px;
+        height: 200px;
+        border: 2px dashed #888;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #555;
+        background-color: #f9f9f9;
+        position: relative; /* 상대 위치를 추가 */
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fileUploader">
+      <p>binFiles previewUploader</p>
+    </div>
+  </body>
+  <script type="module">
+    import PreviewUploader from "../src/PreviewUploader.js";
+
+    const fileUploader = new PreviewUploader({
+      target: document.getElementById("fileUploader"),
+      callbacks: {
+        onLoad: (file) => console.log(fileUploader.getFiles()),
+        maxFiles: 10,
+      },
+    });
+  </script>
+</html>

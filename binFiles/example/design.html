@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>파일 업로드</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://ai-public.creatie.ai/gen_page/tailwind-custom.css"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com/3.4.5?plugins=forms@0.5.7,typography@0.5.13,aspect-ratio@0.4.2,container-queries@0.1.1"></script>
+    <script
+      src="https://ai-public.creatie.ai/gen_page/tailwind-config.min.js"
+      data-color="#000000"
+      data-border-radius="small"
+    ></script>
+  </head>
+  <body class="bg-gray-50 font-[&#39;Noto_Sans_KR&#39;]">
+    <div class="min-h-screen flex flex-col">
+      <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="max-w-3xl mx-auto">
+          <h1 class="text-2xl font-bold mb-8">파일 업로드</h1>
+
+          <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <div
+              class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center mb-6"
+              id="dropZone"
+            >
+              <i
+                class="fas fa-cloud-upload-alt text-4xl text-green-700 mb-4"
+              ></i>
+              <p class="text-gray-600 mb-4">파일을 여기에 드래그하거나</p>
+              <button
+                class="bg-green-700 text-white px-6 py-2 !rounded-button hover:bg-green-800"
+              >
+                파일 선택
+              </button>
+              <input type="file" class="hidden" id="fileInput" multiple="" />
+            </div>
+            <div class="mb-6">
+              <h3 class="font-medium mb-3">업로드 제한</h3>
+              <ul class="text-sm text-gray-600 space-y-2">
+                <li>
+                  <i class="fas fa-check text-green-700 mr-2"></i>최대 파일
+                  크기: 100MB
+                </li>
+                <li>
+                  <i class="fas fa-check text-green-700 mr-2"></i>허용 형식:
+                  JPG, PNG, PDF, DOCX
+                </li>
+                <li>
+                  <i class="fas fa-check text-green-700 mr-2"></i>최대 5개 파일
+                  동시 업로드
+                </li>
+              </ul>
+            </div>
+            <div id="fileList" class="space-y-4 mb-6">
+              <div class="hidden bg-gray-50 p-4 rounded-lg" id="fileTemplate">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="flex items-center">
+                    <i class="fas fa-file text-green-700 mr-3"></i>
+                    <span class="fileName text-sm font-medium">파일명.jpg</span>
+                  </div>
+                  <button class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </div>
+                <div class="relative pt-1">
+                  <div class="flex mb-2 items-center justify-between">
+                    <div>
+                      <span
+                        class="text-xs font-semibold inline-block text-green-700 fileSize"
+                      >
+                        3.5 MB
+                      </span>
+                    </div>
+                    <div class="text-right">
+                      <span
+                        class="text-xs font-semibold inline-block text-green-700 progress"
+                      >
+                        0%
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    class="overflow-hidden h-2 text-xs flex rounded bg-gray-200"
+                  >
+                    <div
+                      class="progressBar shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-700"
+                      style="width: 0%"
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="flex justify-between">
+              <button
+                class="bg-gray-200 text-gray-700 px-6 py-2 !rounded-button hover:bg-gray-300"
+                id="resetBtn"
+              >
+                초기화
+              </button>
+              <button
+                class="bg-green-700 text-white px-6 py-2 !rounded-button hover:bg-green-800"
+                id="uploadBtn"
+              >
+                업로드 시작
+              </button>
+            </div>
+          </div>
+          <div class="fixed bottom-4 right-4" id="notification">
+            <div
+              class="hidden bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg"
+              id="successNotification"
+            >
+              <i class="fas fa-check-circle mr-2"></i>
+              파일 업로드 완료
+            </div>
+            <div
+              class="hidden bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg"
+              id="errorNotification"
+            >
+              <i class="fas fa-exclamation-circle mr-2"></i>
+              업로드 실패
+            </div>
+          </div>
+        </div>
+      </main>
+      <footer class="bg-white border-t">
+        <div class="max-w-8xl mx-auto px-4 py-6">
+          <p class="text-center text-gray-500 text-sm">
+            © 파일 업로드 시스템. All rights reserved.
+          </p>
+        </div>
+      </footer>
+    </div>
+    <script>
+      const dropZone = document.getElementById("dropZone");
+      const fileInput = document.getElementById("fileInput");
+      const fileList = document.getElementById("fileList");
+      const fileTemplate = document.getElementById("fileTemplate");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const resetBtn = document.getElementById("resetBtn");
+      const successNotification = document.getElementById(
+        "successNotification"
+      );
+      const errorNotification = document.getElementById("errorNotification");
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("border-custom");
+      });
+      dropZone.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-custom");
+      });
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("border-custom");
+        const files = e.dataTransfer.files;
+        handleFiles(files);
+      });
+      dropZone.addEventListener("click", () => {
+        fileInput.click();
+      });
+      fileInput.addEventListener("change", (e) => {
+        handleFiles(e.target.files);
+      });
+
+      function handleFiles(files) {
+        Array.from(files).forEach((file) => {
+          const fileElement = fileTemplate.cloneNode(true);
+          fileElement.classList.remove("hidden");
+          fileElement.querySelector(".fileName").textContent = file.name;
+          fileElement.querySelector(".fileSize").textContent = formatFileSize(
+            file.size
+          );
+          fileList.appendChild(fileElement);
+          fileElement.querySelector("button").addEventListener("click", () => {
+            fileElement.remove();
+          });
+        });
+      }
+
+      function formatFileSize(bytes) {
+        if (bytes === 0) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+      }
+      uploadBtn.addEventListener("click", () => {
+        const files = fileList.querySelectorAll(
+          "#fileList > div:not(#fileTemplate)"
+        );
+        files.forEach((file) => {
+          simulateUpload(file);
+        });
+      });
+
+      resetBtn.addEventListener("click", () => {
+        const files = fileList.querySelectorAll(
+          "#fileList > div:not(#fileTemplate)"
+        );
+        files.forEach((file) => file.remove());
+      });
+
+      function simulateUpload(fileElement) {
+        let progress = 0;
+        const progressBar = fileElement.querySelector(".progressBar");
+        const progressText = fileElement.querySelector(".progress");
+
+        const interval = setInterval(() => {
+          progress += 5;
+          progressBar.style.width = progress + "%";
+          progressText.textContent = progress + "%";
+
+          if (progress >= 100) {
+            clearInterval(interval);
+            showNotification(true);
+          }
+        }, 100);
+      }
+
+      function showNotification(success) {
+        const notification = success ? successNotification : errorNotification;
+        notification.classList.remove("hidden");
+        setTimeout(() => {
+          notification.classList.add("hidden");
+        }, 3000);
+      }
+    </script>
+  </body>
+</html>
