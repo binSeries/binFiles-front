@@ -37,24 +37,22 @@ export default class Uploader {
     input.type = "file";
     input.style.opacity = 0; // 보이지 않도록 처리
     input.style.position = "absolute";
-    input.style.width = "100%";
-    input.style.height = "100%";
     input.style.cursor = "pointer";
     input.style.top = 0;
     input.style.left = 0;
     input.style.zIndex = 1000;
 
-    input.addEventListener("dragover", (event) => {
-      event.preventDefault();
+    this.target.addEventListener("click", (event) => {
+      input.click();
     });
 
-    input.addEventListener("drop", (event) => {
+    this.target.addEventListener("drop", (event) => {
       event.preventDefault();
-      this.triggerOnLoad(event);
+      this.triggerOnLoad(event.dataTransfer.files);
     });
 
     input.addEventListener("change", (event) => {
-      this.triggerOnLoad(event);
+      this.triggerOnLoad(event.target.files);
     });
 
     this.input = input;
@@ -64,8 +62,8 @@ export default class Uploader {
   /**
    * 파일 선택 시 onLoad 트리거
    */
-  triggerOnLoad(event) {
-    this.files = event.target.files;
+  triggerOnLoad(files) {
+    this.files = files;
 
     // 파일이 선택되지 않았다면 무시
     if (!this.files || this.files.length === 0) return;
