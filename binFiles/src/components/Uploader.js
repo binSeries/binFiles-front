@@ -5,9 +5,9 @@ export default class Uploader {
     callbacks = {},
     uploadMode = "multi",
     uploadUrl,
-    existingFile,
+    existingFiles,
   }) {
-    this.target = target; // 업로드 버튼이 표시될 대상
+    this.target = target; // 업로드 영역
     this.options = {
       maxFiles: Infinity,
       minFiles: 0,
@@ -26,13 +26,27 @@ export default class Uploader {
     this.files = null; // 선택된 파일
     this.uploadMode = uploadMode; // single: 개별 파일 업로드, multi: 다중 파일 업로드
     this.uploadUrl = uploadUrl; // 파일 업로드 URL
-    this.existingFile = existingFile; // 기존 파일
+    this.existingFiles = existingFiles; // 기존 파일
 
     this.init();
   }
 
   init() {
-    // 파일 uploadInput 생성
+    this.createFileInput();
+
+    if (
+      this.existingFiles !== null &&
+      this.existingFiles !== undefined &&
+      this.existingFiles.length > 0
+    ) {
+      this.loadExistingFiles();
+    }
+  }
+
+  /**
+   * uploadInput 생성
+   */
+  createFileInput() {
     const input = document.createElement("input");
     input.type = "file";
     input.style.opacity = 0; // 보이지 않도록 처리
@@ -60,13 +74,23 @@ export default class Uploader {
   }
 
   /**
+   * 기존 파일 로드
+   */
+  loadExistingFiles() {
+    this.existingFiles.forEach((file) => {
+      this.triggerOnLoad(file);
+    });
+  }
+
+  /**
    * 파일 선택 시 onLoad 트리거
    */
-  triggerOnLoad(files) {
-    this.files = files;
-
+  triggerOnLoad(file) {
     // 파일이 선택되지 않았다면 무시
-    if (!this.files || this.files.length === 0) return;
+    if (!file || file.length < 0) return;
+
+    // 기존 파일과 새로 선택된 파일 병합
+    this.files = this.files ? [...this.files, file[0]] : [file[0]];
 
     // 파일 로드 콜백 실행
     if (this.callbacks.onLoad && typeof this.callbacks.onLoad === "function") {
@@ -231,7 +255,22 @@ export default class Uploader {
    * 선택된 파일 반환
    */
   getSelectedFiles() {
-    return this.files ? Array.from(this.files) : [];
+    return this.files ? this.files : [];
+  }
+
+  /**
+   * 목록에서 파일 제거
+   */
+  removeFile(file) {
+    this.files = Array.from(this.files).filter((f) => f !== file);
+    console.log(this.files);
+  }
+
+  /**
+   * 파일 목록 초기화
+   */
+  resetFiles() {
+    this.files = null;
   }
 
   /**
