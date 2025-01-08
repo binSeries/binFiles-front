@@ -1,3 +1,8 @@
+import {
+  validateFiles,
+  mergeWithExistingFiles,
+} from "../services/uploaderService.js";
+
 export default class Uploader {
   constructor({
     target,
@@ -85,12 +90,12 @@ export default class Uploader {
   /**
    * 파일 선택 시 onLoad 트리거
    */
-  triggerOnLoad(file) {
+  triggerOnLoad(files) {
     // 파일이 선택되지 않았다면 무시
-    if (!file || file.length < 0) return;
+    if (!files || files.length < 0) return;
 
     // 기존 파일과 새로 선택된 파일 병합
-    this.files = this.files ? [...this.files, file[0]] : [file[0]];
+    mergeWithExistingFiles(this.files, files);
 
     // 파일 로드 콜백 실행
     if (this.callbacks.onLoad && typeof this.callbacks.onLoad === "function") {
@@ -108,7 +113,7 @@ export default class Uploader {
     }
 
     // 유효성 검사
-    this.validateFile();
+    validateFile(this.files, this.options);
 
     // beforeUpload 후크 실행
     if (
@@ -195,59 +200,6 @@ export default class Uploader {
         error,
         status: "error",
       }));
-    }
-  }
-
-  /**
-   * 파일 유효성 검사
-   */
-  validateFile() {
-    // 파일 확장자
-    if (
-      this.options.allowedExtensions.length > 0 &&
-      Array.from(this.files).some(
-        (file) =>
-          !this.options.allowedExtensions.includes(file.name.split(".").pop())
-      )
-    ) {
-      throw new Error(`허용되지 않은 파일 확장자가 포함되어 있습니다.`);
-    }
-
-    // 파일 최대값
-    if (
-      this.options.maxFiles !== Infinity &&
-      this.files.length > this.options.maxFiles
-    ) {
-      throw new Error(`파일 최대 개수를 초과하였습니다.`);
-    }
-
-    // 파일 최소값
-    if (
-      this.options.minFiles !== 0 &&
-      this.files.length < this.options.minFiles
-    ) {
-      throw new Error(`파일 최소 개수를 충족하지 않았습니다.`);
-    }
-
-    // total파일 사이즈
-    // total파일 사이즈를 여러 형태로 정의할 수 있어야 한다.
-    const totalSize = Array.from(this.files).reduce(
-      (totalSize, file) => totalSize + file.size,
-      0
-    );
-
-    if (totalSize > this.options.maxTotalSize) {
-      throw new Error(`파일 총 업로드 가능 크기를 초과하였습니다.`);
-    }
-
-    // 개별 최대 파일 사이즈
-    if (
-      this.options.maxFileSize !== Infinity &&
-      Array.from(this.files).some(
-        (file) => file.size > this.options.maxFileSize
-      )
-    ) {
-      throw new Error(`파일 최대 크기를 초과하였습니다.`);
     }
   }
 
