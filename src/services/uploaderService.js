@@ -43,12 +43,3 @@ export function validateFile(files, options) {
     throw new Error(`파일 최대 크기를 초과하였습니다.`);
   }
 }
-
-/**
- * 기존 파일과 새로 업로드를 위해 올라온 파일 병합
- * @param {*} existingFiles
- * @param {*} newFiles
- */
-export function mergeWithExistingFiles(existingFiles, newFiles) {
-  return existingFiles ? [...existingFiles, ...Array.from(newFiles)] : newFiles;
-}

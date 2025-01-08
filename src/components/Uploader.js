@@ -1,8 +1,10 @@
 import {
   validateFiles,
   mergeWithExistingFiles,
+  uploadMultipleFiles,
+  uploadSingleFile,
 } from "../services/uploaderService.js";
-
+import { FileState } from "../state/UploadState.js";
 export default class Uploader {
   constructor({
     target,
@@ -28,23 +30,19 @@ export default class Uploader {
       ...callbacks, // 콜백 함수 overriding을 위한 병합
     };
 
-    this.files = null; // 선택된 파일
     this.uploadMode = uploadMode; // single: 개별 파일 업로드, multi: 다중 파일 업로드
     this.uploadUrl = uploadUrl; // 파일 업로드 URL
-    this.existingFiles = existingFiles; // 기존 파일
 
+    FileState.set("existingFiles", existingFiles);
     this.init();
   }
 
   init() {
     this.createFileInput();
 
-    if (
-      this.existingFiles !== null &&
-      this.existingFiles !== undefined &&
-      this.existingFiles.length > 0
-    ) {
-      this.loadExistingFiles();
+    const existingFiles = FileState.get("existingFiles");
+    if (existingFiles.length > 0) {
+      this.loadExistingFiles(existingFiles);
     }
   }
 
@@ -67,11 +65,11 @@ export default class Uploader {
 
     this.target.addEventListener("drop", (event) => {
       event.preventDefault();
-      this.triggerOnLoad(event.dataTransfer.files);
+      this.handleFileDrop(event.dataTransfer.files);
     });
 
     input.addEventListener("change", (event) => {
-      this.triggerOnLoad(event.target.files);
+      this.handleFileDrop(event.target.files);
     });
 
     this.input = input;
@@ -81,25 +79,26 @@ export default class Uploader {
   /**
    * 기존 파일 로드
    */
-  loadExistingFiles() {
-    this.existingFiles.forEach((file) => {
-      this.triggerOnLoad(file);
-    });
+  loadExistingFiles(existingFiles) {
+    FileState.addTo("displayFiles", files);
+    if (this.callbacks.onLoad && typeof this.callbacks.onLoad === "function") {
+      Array.from(existingFiles).forEach((file) => this.callbacks.onLoad(file));
+    }
   }
 
   /**
    * 파일 선택 시 onLoad 트리거
    */
-  triggerOnLoad(files) {
+  handleFileDrop(files) {
     // 파일이 선택되지 않았다면 무시
     if (!files || files.length < 0) return;
 
     // 기존 파일과 새로 선택된 파일 병합
-    mergeWithExistingFiles(this.files, files);
+    FileState.addTo("displayFiles", Array.from(files));
 
     // 파일 로드 콜백 실행
     if (this.callbacks.onLoad && typeof this.callbacks.onLoad === "function") {
-      Array.from(this.files).forEach((file) => this.callbacks.onLoad(file));
+      Array.from(files).forEach((file) => this.callbacks.onLoad(file));
     }
   }
 
@@ -107,107 +106,78 @@ export default class Uploader {
    * 파일 업로드
    */
   async upload() {
-    if (!this.files || this.files.length === 0) {
+    const filesToUpload = FileState.get("displayFiles");
+    if (!filesToUpload || filesToUpload.length === 0) {
       alert("업로드 할 파일이 없습니다.");
       return;
     }
 
     // 유효성 검사
-    validateFile(this.files, this.options);
+    validateFiles(filesToUpload, this.options);
 
     // beforeUpload 후크 실행
     if (
       this.callbacks.beforeUpload &&
       typeof this.callbacks.beforeUpload === "function"
     ) {
-      const shouldProceed = await this.callbacks.beforeUpload(this.files);
+      const shouldProceed = await this.callbacks.beforeUpload(filesToUpload);
       if (shouldProceed === false) return;
     }
 
     // 파일 업로드 로직 실행
-    let uploadResults = null;
+    let uploadedFiles = [];
     if (this.uploadMode === "multi") {
-      uploadResults = await this.uploadFiles(this.files);
+      uploadedFiles = await uploadMultipleFiles(this.uploadUrl, this.files);
     } else if (this.uploadMode === "single") {
-      uploadResults = await Promise.all(
-        this.files.map((file) => this.uploadFile(file))
+      uploadedFiles = await Promise.all(
+        this.files.map((file) => uploadSingleFile(this.uploadUrl, file))
       );
     }
 
+    FileState.addTo("uploadedFiles", uploadedFiles);
+
     // afterUpload 후크 실행
     if (this.callbacks.afterUpload) {
-      this.callbacks.afterUpload(uploadResults);
+      this.callbacks.afterUpload(uploadedFiles);
     }
 
     // 업로드 후 파일 초기화
-    this.files = null;
+    FileState.reset("displayFiles");
   }
 
   /**
-   * uploadMode === single 일 때 단일 업로드 진행
+   * 화면에 표시된 파일 반환
    */
-  async uploadFile(file) {
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await fetch(this.uploadUrl, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed for ${file.name}`);
-      }
-
-      const result = await response.json();
-      return { file, result, status: "success" };
-    } catch (error) {
-      console.log("Upload error : " + error);
-      return { file, error, status: "error" };
-    }
+  getDisplayFiles() {
+    return FileState.get("displayFiles");
   }
 
   /**
-   * uploadMode === multi 일 때 다중 업로드 진행
+   * 업로드할 파일 반환
    */
-  async uploadFiles(files) {
-    try {
-      const formData = new FormData();
-      files.forEach((file) => {
-        formData.append("files", file);
-      });
-
-      const response = await fetch(this.uploadUrl, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        throw new Error("Multi upload failed");
-      }
-
-      const results = await response.json();
-      return results.map((result, index) => ({
-        file: files[index],
-        result,
-        status: "success",
-      }));
-    } catch (error) {
-      console.error("Upload error : ", error);
-      return files.map((file) => ({
-        file,
-        error,
-        status: "error",
-      }));
-    }
+  getNeedUploadFiles() {
+    return FileState.get("needUploadFiles");
   }
 
   /**
-   * 선택된 파일 반환
+   * 삭제할 파일 반환
    */
-  getSelectedFiles() {
-    return this.files ? this.files : [];
+  getNeedDeleteFiles() {
+    return FileState.get("needDeleteFiles");
+  }
+
+  /**
+   * 업로드 된 파일 반환
+   */
+  getUploadedFiles() {
+    return FileState.get("uploadedFiles");
+  }
+
+  /**
+   * 삭제 된 파일 반환
+   */
+  getDeletedFiles() {
+    return FileState.get("deletedFiles");
   }
 
   /**
@@ -224,17 +194,4 @@ export default class Uploader {
   resetFiles() {
     this.files = null;
   }
-
-  /**
-   * 삭제된 파일 반환
-   */
-  getDelFiles() {}
-
-  /**
-   * 업로드 된 파일 반환
-   */
-  getUploadFiles() {}
-  /**
-   *
-   */
 }
